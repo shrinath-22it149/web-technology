@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="jobPortalApp">
+<head>
+  <meta charset="UTF-8">
+  <title>Job Portal</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-route.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-animate.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    .navbar {
+      background: #333;
+      color: white;
+      padding: 1em;
+    }
+    .navbar a {
+      color: white;
+      margin: 0 1em;
+      text-decoration: none;
+    }
+    .content {
+      padding: 2em;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+    .user-card, .employee-card {
+      border: 1px solid #ccc;
+      padding: 1em;
+      margin: 1em 0;
+    }
+    .fade {
+      transition: opacity 0.5s ease;
+    }
+    .fade.ng-enter {
+      opacity: 0;
+    }
+    .fade.ng-enter-active {
+      opacity: 1;
+    }
+    .fade.ng-leave {
+      opacity: 1;
+    }
+    .fade.ng-leave-active {
+      opacity: 0;
+    }
+    .job-list {
+      list-style-type: none;
+      padding: 0;
+    }
+    .job-list li {
+      border: 1px solid #ccc;
+      padding: 1em;
+      margin: 1em 0;
+    }
+    .slide {
+      transition: transform 0.5s ease;
+    }
+    .slide.ng-enter {
+      transform: translateX(100%);
+    }
+    .slide.ng-enter-active {
+      transform: translateX(0);
+    }
+    .slide.ng-leave {
+      transform: translateX(0);
+    }
+    .slide.ng-leave-active {
+      transform: translateX(-100%);
+    }
+    .rotate {
+      animation: rotateIn 1s;
+    }
+    @keyframes rotateIn {
+      0% {
+        transform: rotate(-200deg);
+        opacity: 0;
+      }
+      100% {
+        transform: rotate(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <a href="#!/">Welcome</a>
+    <a href="#!/login">Login</a>
+    <a href="#!/signup">Signup</a>
+    <a href="#!/home">Home</a>
+    <a href="#!/profile">Profile</a>
+    <a href="#!/addjob">Add Job</a>
+    <a href="#!/myjobs">My Jobs</a>
+    <a href="#!/employees">Employees</a>
+    <a href="#!/logout">Logout</a>
+  </div>
+  
+  <div class="content" ng-view class="fade"></div>
+
+  <script>
+    // Main AngularJS Module
+    angular.module('jobPortalApp', ['ngRoute', 'ngAnimate', 'authModule', 'jobModule', 'profileModule', 'employeeModule'])
+      .config(function($routeProvider) {
+        $routeProvider
+          .when('/', {
+            templateUrl: 'welcome.html',
+            controller: 'MainController'
+          })
+          .when('/login', {
+            templateUrl: 'login.html',
+            controller: 'LoginController'
+          })
+          .when('/signup', {
+            templateUrl: 'signup.html',
+            controller: 'SignupController'
+          })
+          .when('/home', {
+            templateUrl: 'home.html',
+            controller: 'HomeController'
+          })
+          .when('/profile', {
+            templateUrl: 'profile.html',
+            controller: 'ProfileController'
+          })
+          .when('/addjob', {
+            templateUrl: 'addjob.html',
+            controller: 'CreateJobsController'
+          })
+          .when('/myjobs', {
+            templateUrl: 'myjobs.html',
+            controller: 'MyJobsController'
+          })
+          .when('/employees', {
+            templateUrl: 'employees.html',
+            controller: 'EmployeesController'
+          })
+          .when('/employees/:employeeId', {
+            templateUrl: 'employeeDetails.html',
+            controller: 'EmployeeDetailsController'
+          })
+          .otherwise({
+            redirectTo: '/'
+          });
+      })
+      .animation('.fade', function() {
+        return {
+          enter: function(element, done) {
+            element.css({ opacity: 0 });
+            element.animate({ opacity: 1 }, done);
+          },
+          leave: function(element, done) {
+            element.animate({ opacity: 0 }, done);
+          }
+        };
+      })
+      .animation('.slide', function() {
+        return {
+          enter: function(element, done) {
+            element.css({ transform: 'translateX(100%)' });
+            element.animate({ transform: 'translateX(0)' }, done);
+          },
+          leave: function(element, done) {
+            element.animate({ transform: 'translateX(-100%)' }, done);
+          }
+        };
+      })
+      .animation('.rotate', function() {
+        return {
+          enter: function(element, done) {
+            element.css({ transform: 'rotate(-200deg)', opacity: 0 });
+            element.animate({ transform: 'rotate(0)', opacity: 1 }, done);
+          }
+        };
+      });
+
+    // Auth Module
+    angular.module('authModule', [])
+      .service('AuthService', function() {
+        var user = {
+          username: '',
+          age: '',
+          department: '',
+          domain: '',
+          interests: '',
+          languages: '',
+          place: ''
+        };
+        return {
+          login: function(credentials) {
+            user.username = credentials.username;
+          },
+          getUser: function() {
+            return user;
+          },
+          updateUser: function(details) {
+            angular.extend(user, details);
+          }
+        };
+      })
+      .controller('LoginController', function($scope, AuthService, $location) {
+        $scope.login = function(credentials) {
+          AuthService.login(credentials);
+          $location.path('/home');
+        };
+      })
+      .controller('SignupController', function($scope, $location) {
+        $scope.signup = function(user) {
+          // Simple signup logic
+          $location.path('/login');
+        };
+      });
+
+    // Job Module
+    angular.module('jobModule', [])
+      .service('JobService', function() {
+        var jobs = [];
+        return {
+          addJob: function(job) {
+            jobs.push(job);
+          },
+          getJobs: function() {
+            return jobs;
+          }
+        };
+      })
+      .controller('CreateJobsController', function($scope, JobService) {
+        $scope.job = {};
+        $scope.createJob = function() {
+          JobService.addJob($scope.job);
+          $scope.job = {}; // Reset the form
+        };
+      })
+      .controller('MyJobsController', function($scope, JobService) {
+        $scope.jobs = JobService.getJobs();
+      })
+      .controller('HomeController', function($scope) {})
+      .controller('JobApplicationsController', function($scope, $routeParams) {
+        $scope.jobId = $routeParams.jobId;
+      })
+      .controller('AcceptedApplicantsController', function($scope) {});
+
+    // Profile Module
+    angular.module('profileModule', [])
+      .controller('ProfileController', function($scope, AuthService) {
+        $scope.user = AuthService.getUser();
+        $scope.updateProfile = function() {
+          AuthService.updateUser($scope.user);
+        };
+      })
+      .directive('userCard', function() {
+        return {
+          restrict: 'E',
+          template: '<div class="user-card"><h3>{{user.username}}</h3></div>',
+          scope: {
+            user: '='
+          }
+        };
+      });
+
+    // Employee Module
+    angular.module('employeeModule', [])
+      .service('EmployeeService', function() {
+        var employees = [];
+        
+        return {
+          addEmployee: function(employee) {
+            employees.push(employee);
+          },
+          getEmployee: function(id) {
+            return employees.find(emp => emp.id === parseInt(id));
+          },
+          getEmployees: function() {
+            return employees;
+          },
+          deleteEmployee: function(id) {
+            employees = employees.filter(emp => emp.id !== parseInt(id));
+          }
+        };
+      })
+      .controller('EmployeeDetailsController', function($scope, $routeParams, EmployeeService, $location) {
+        var employeeId = $routeParams.employeeId;
+        $scope.employee = EmployeeService.getEmployee(employeeId);
+
+        $scope.deleteEmployee = function() {
+          if (confirm('Are you sure you want to delete this employee?')) {
+            EmployeeService.deleteEmployee($scope.employee.id);
+            $location.path('/employees'); // Redirect to employees list after deletion
+          }
+        };
+      })
+      .controller('EmployeesController', function($scope, EmployeeService, AuthService) {
+        $scope.employees = EmployeeService.getEmployees();
+        $scope.currentUser = AuthService.getUser();
+        
+        // Adding the current user to employees list if not already present
+        if ($scope.currentUser.username) {
+          let exists = $scope.employees.some(emp => emp.username === $scope.currentUser.username);
+          if (!exists) {
+            EmployeeService.addEmployee({
+              id: $scope.employees.length + 1,
+              ...$scope.currentUser
+            });
+            $scope.employees.push($scope.currentUser);
+          }
+        }
+      });
+  </script>
+  
+  <!-- Template scripts -->
+  <script type="text/ng-template" id="welcome.html">
+    <div>
+      <h1>Welcome to the Job Portal</h1>
+      <img src="job-portal-1.jpg" alt="Welcome">
+    </div>
+  </script>
+  
+  <script type="text/ng-template" id="login.html">
+    <div class="rotate">
+      <h2>Login</h2>
+      <form ng-submit="login(credentials)">
+        <input type="text" ng-model="credentials.username" placeholder="Username">
+        <input type="password" ng-model="credentials.password" placeholder="Password">
+        <button type="submit">Login</button>
+      </form>
+    </div>
+  </script>
+  
+  <script type="text/ng-template" id="signup.html">
+    <div class="rotate">
+      <h2>Signup</h2>
+      <form ng-submit="signup(user)">
+        <input type="text" ng-model="user.username" placeholder="Username">
+        <input type="password" ng-model="user.password" placeholder="Password">
+        <button type="submit">Signup</button>
+      </form>
+    </div>
+  </script>
+  
+  <script type="text/ng-template" id="home.html">
+    <div class="rotate">
+      <h2>Home Page</h2>
+      <img src="1.jpg" alt="Home">
+    </div>
+  </script>
+  
+  <script type="text/ng-template" id="profile.html">
+    <div class="rotate">
+      <h2>User Profile</h2>
+      <form ng-submit="updateProfile()">
+        <label>Username:</label>
+        <input type="text" ng-model="user.username" disabled>
+        <label>Age:</label>
+        <input type="number" ng-model="user.age">
+        <label>Department:</label>
+        <input type="text" ng-model="user.department">
+        <label>Domain:</label>
+        <input type="text" ng-model="user.domain">
+        <label>Interests:</label>
+        <input type="text" ng-model="user.interests">
+        <label>Languages:</label>
+        <input type="text" ng-model="user.languages">
+        <label>Place:</label>
+        <input type="text" ng-model="user.place">
+        <button type="submit">Update Profile</button>
+      </form>
+    </div>
+  </script>
+  
+  <script type="text/ng-template" id="addjob.html">
+    <div class="rotate">
+      <h2>Add Job</h2>
+      <form ng-submit="createJob()">
+        <input type="text" ng-model="job.title" placeholder="Job Title">
+        <textarea ng-model="job.description" placeholder="Job Description"></textarea>
+        <button type="submit">Add Job</button>
+      </form>
+    </div>
+  </script>
+  
+  <script type="text/ng-template" id="myjobs.html">
+    <div class="rotate">
+      <h2>My Jobs</h2>
+      <ul class="job-list">
+        <li ng-repeat="job in jobs" class="slide">
+          <h3>{{job.title}}</h3>
+          <p>{{job.description}}</p>
+        </li>
+      </ul>
+    </div>
+  </script>
+  
+  <script type="text/ng-template" id="employees.html">
+    <div class="rotate">
+      <h2>Employees List</h2>
+      <ul class="job-list">
+        <li ng-repeat="employee in employees" class="slide">
+          <h3>{{employee.username}}</h3>
+          <p><strong>Department:</strong> {{employee.department}}</p>
+          <p><strong>Domain:</strong> {{employee.domain}}</p>
+          <a href="#!/employees/{{employee.id}}">View Details</a>
+        </li>
+      </ul>
+    </div>
+  </script>
+  
+  <script type="text/ng-template" id="employeeDetails.html">
+    <div class="rotate">
+      <h2>Employee Details</h2>
+      <div class="employee-card">
+        <h3>{{employee.username}}</h3>
+        <p><strong>Age:</strong> {{employee.age}}</p>
+        <p><strong>Department:</strong> {{employee.department}}</p>
+        <p><strong>Domain:</strong> {{employee.domain}}</p>
+        <p><strong>Interests:</strong> {{employee.interests}}</p>
+        <p><strong>Languages:</strong> {{employee.languages}}</p>
+        <p><strong>Place:</strong> {{employee.place}}</p>
+        <button ng-click="deleteEmployee()">Delete</button>
+      </div>
+    </div>
+  </script>
+</body>
+</html>
